@@ -1,0 +1,625 @@
+# sampleAgents.py
+# parsons/07-oct-2017
+#
+# Version 1.1
+#
+# Some simple agents to work with the PacMan AI projects from:
+#
+# http://ai.berkeley.edu/
+#
+# These use a simple API that allow us to control Pacman's interaction with
+# the environment adding a layer on top of the AI Berkeley code.
+#
+# As required by the licensing agreement for the PacMan AI we have:
+#
+# Licensing Information:  You are free to use or extend these projects for
+# educational purposes provided that (1) you do not distribute or publish
+# solutions, (2) you retain this notice, and (3) you provide clear
+# attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
+# 
+# Attribution Information: The Pacman AI projects were developed at UC Berkeley.
+# The core projects and autograders were primarily created by John DeNero
+# (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
+# Student side autograding was added by Brad Miller, Nick Hay, and
+# Pieter Abbeel (pabbeel@cs.berkeley.edu).
+
+# The agents here are extensions written by Simon Parsons, based on the code in
+# pacmanAgents.py
+
+from pacman import Directions
+from game import Agent
+import api
+import random
+import game
+import util
+import collections
+
+class MDPAgent(Agent):
+    
+
+    def __init__(self):
+        self.pacman_steps = list()
+        self.new_util = dict()
+        print("top", self.new_util)
+        self.dict_util =dict()
+        print("top dict util", self.dict_util)
+        
+        self.flag =0
+    
+        
+       
+    def getAction(self, state):
+    	  #calls the legal Actions api which returns a list of legal moves from Pac-man agents current location	
+        legal = api.legalActions(state)
+         
+        #corners API returns a list of the four corners in each maze    
+        corners = api.corners(state)
+        
+        #calls the API which returns wall locations 
+        wall_location = api.walls(state)
+        #print('walls', wall_location)
+        
+        #API call returns Pac-man agent's current location
+        my_location = api.whereAmI(state)
+        
+        #API call returns food location
+        food_location = api.food(state)
+        
+        #API call returns ghost locations 
+        ghost_location = api.ghosts(state)
+
+        # print('corners:', corners)
+        # print('walls:', wall_location)
+        # print('pacman location:', my_location)
+
+        width = corners[3][0] - corners[0][0]
+        #print( 'width of grid:', width)
+
+        height = corners[3][1] - corners[1][1]  
+        #print('height of grid:', height)
+
+        #global variables
+        
+        
+
+        rows =[]
+        #create co-ordinates with dimensions of the map
+        for i in range(width+1):
+            
+            for j in range(height+1):
+
+                rows.append((i,j))
+        #if coordinates in walls remove so that only traversable coordinates remain
+        for wall in wall_location:
+
+            if wall  in rows:
+                rows.remove(wall)
+                
+        #print traversable coordinates
+        #print('coordinates:', rows)
+
+        #dict_util = {}
+        
+        #for each traversable coordinate assign a value to it in a DICTIONARY
+        while self.flag==0:
+
+            for i in range(len(rows)):
+
+                if rows[i] in food_location:
+                    #print('food', rows[i])
+
+                    #dict_util[rows[i]] = 10
+                    self.dict_util[rows[i]] = 10
+                
+                else:
+                    #dict_util[rows[i]] = 0
+                    self.dict_util[rows[i]] = 0
+
+            self.flag =1
+
+
+        print('utilities dict:', self.dict_util)
+
+        #store steps pacman takes in a persistent list
+        if my_location not in (self.pacman_steps):
+            self.pacman_steps.append(my_location)
+        else:
+            pass
+        print('pacman steps:', self.pacman_steps)
+
+        reward = -0.04
+        gamma = 1
+
+        calulated_util = {}
+
+        
+        #for key in the self util dictionary i.e (1,1) = 0
+        for node in self.dict_util:
+            #get children if they are not in walls [(2,1),(1,2)]
+            neighbour_nodes =self.neighbour(node, wall_location)
+
+            #print('node:', node)
+            #print('neighbour nodes:', neighbour_nodes)
+
+            #get length of list 1,2,3 or 4
+            len_of_list = len(neighbour_nodes)
+
+            #for each node assign new value in the new_util dictionary
+            if len_of_list ==1 and (node in food_location):
+                #print('list length is 1')
+                self.dict_util[node] = 10
+
+            elif len_of_list==1 and (node not in food_location):
+
+                (self.dict_util[neighbour_nodes[0]] *0.8) + (self.dict_util[node] *0.2)
+            
+            
+            elif len_of_list ==2:
+                #print('length of list is 2')
+                x,y = node
+                up = (x,y+1)
+                down = (x, y-1)
+                right = (x+1,y)
+                left = (x-1,y)
+
+
+                
+                empty_list =[]
+                if ((left in wall_location) and (down in wall_location)):
+                    exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1)
+                    exp_left = (self.dict_util[node]*0.9) + (self.dict_util[up]*0.1)
+                    exp_down = (self.dict_util[node]*0.9) + (self.dict_util[right]*0.1)
+                    exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+                    
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+
+                elif ((right in wall_location) and (down in wall_location)):
+                    exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+                    exp_left = (self.dict_util[left]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[node]*0.1)
+                    exp_down = (self.dict_util[node]*0.9) + (self.dict_util[left]*0.1)
+                    exp_right = (self.dict_util[node]*0.9) + (self.dict_util[up]*0.1)
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+                    
+                elif ((up in wall_location) and (down in wall_location)):
+                    exp_up = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+                    exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.2) 
+                    exp_down = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+                    exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.2)
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+                    
+                elif ((left in wall_location) and (right in wall_location)):
+                    exp_up = (self.dict_util[up]*0.8)  + (self.dict_util[node]*0.2)
+                    exp_left = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+                    exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.2) 
+                    exp_right = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[up]*0.1)
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+                
+                elif ((up in wall_location) and (right in wall_location)):
+                    exp_up = (self.dict_util[node]*0.9)  + (self.dict_util[left]*0.1)
+                    exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+                    exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1) 
+                    exp_right = (self.dict_util[node]*0.9) + (self.dict_util[down]*0.1) 
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+                
+                elif ((up in wall_location) and (left in wall_location)):
+                    exp_up = (self.dict_util[node]*0.9)  + (self.dict_util[right]*0.1)
+                    exp_left = (self.dict_util[node]*0.9) + (self.dict_util[down]*0.1)
+                    exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1) 
+                    exp_right = (self.dict_util[right]*0.8) + (self.dict_util[down]*0.1) + (self.dict_util[node]*0.1) 
+
+                    empty_list.append(exp_up)
+                    empty_list.append(exp_left)
+                    empty_list.append(exp_down)
+                    empty_list.append(exp_right)
+
+
+                
+                self.dict_util[node] = (-0.04 + gamma * max(empty_list))
+                #print("empty_list", empty_list)
+                max_util = max(empty_list)
+                #print("max utility", max_util)
+                self.dict_util[node] = (-0.04 + gamma * max_util)
+                
+
+            elif len_of_list ==3:
+                #print('length of list is 3')
+                x,y = node
+                up = (x,y+1)
+                down = (x, y-1)
+                right = (x+1,y)
+                left = (x-1,y)
+
+                wall_location_list =[]
+                wall_location_list.append(up)
+                wall_location_list.append(down)
+                wall_location_list.append(right)
+                wall_location_list.append(left)
+                
+
+                #print("wall location list:", wall_location_list)
+                empty_list= []
+                for wall in wall_location_list:
+                    if right in wall_location:
+
+                        exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+                        exp_left = (self.dict_util[left]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+                        exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+                        exp_right = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+
+
+
+
+                        empty_list.append(exp_up)
+                        empty_list.append(exp_left)
+                        empty_list.append(exp_down)
+                        empty_list.append(exp_right)
+
+                    elif left in wall_location:
+
+                        exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1)
+                        exp_left = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+                        exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1)
+                        exp_right = (self.dict_util[right]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+
+                        empty_list.append(exp_up)
+                        empty_list.append(exp_left)
+                        empty_list.append(exp_down)
+                        empty_list.append(exp_right)
+                    
+                    elif up in wall_location:
+                        
+
+                        exp_up = (self.dict_util[node]*0.8) + (self.dict_util[right]*0.1) + (self.dict_util[left]*0.1)
+                        exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+                        exp_down = (self.dict_util[down]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+                        exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+
+                        empty_list.append(exp_up)
+                        empty_list.append(exp_left)
+                        empty_list.append(exp_down)
+                        empty_list.append(exp_right)
+                    
+                    elif down in wall_location:
+                        
+
+                        exp_up = (self.dict_util[up]*0.8) + (self.dict_util[right]*0.1) + (self.dict_util[left]*0.1)
+                        exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+                        exp_down = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+                        exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+
+                        empty_list.append(exp_up)
+                        empty_list.append(exp_left)
+                        empty_list.append(exp_down)
+                        empty_list.append(exp_right)
+                
+                    self.dict_util[node] = (-0.04 + gamma * max(empty_list))
+
+                    #print("empty_list:", empty_list)
+                    max_util = max(empty_list)
+                    #print("max utility", max_util)
+
+        print("new utilities:", self.dict_util)
+                        
+
+
+                        
+
+                
+           
+            
+
+
+
+            
+
+            
+
+
+        raw_input('Press Enter')
+
+        return api.makeMove(random.choice(legal), legal)
+        
+    def neighbour(self, node, wall_location):
+            children = []
+            x,y = node
+            #print ('parent node:', node)
+            #print('x', x)
+            #print('y', y)
+            north = (x, y+1)
+            south = (x, y-1)
+            east = (x+1, y)
+            west = (x-1,y)
+
+            if north not in wall_location:
+
+                children.append(north)
+            else:
+                pass
+            if south not in wall_location:
+                children.append(south)
+            else:
+                pass
+            
+            if east not in wall_location:
+                children.append(east)
+            else:
+                pass
+            if west not in wall_location:
+                children.append(west)
+            #print ('child nodes:', children)
+            return children
+        
+        
+        
+
+                    
+
+             
+        
+        
+
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           	
+	
+    def mapRoute(self, current_location, next_location, legal, flag):
+        #returns a direction command each state run which takes Pac-man from his current location to the goal
+        
+        #the path list in the next_location parameter includes the current location of pacman and so is removed from the list
+        next_location.pop(0)
+        
+        #length of path to goal
+        len_of_list = len(next_location)
+        
+        #loop through the list provided the length is greater than 1
+        for i in range(len_of_list):
+
+            # loop runs until the pathlist is empty
+            if len_of_list > 1:
+            	
+            	
+					               
+               """takes the first step in the path and subtracts it from pacmans current location uses the returned tuple to determine action.
+               if the tuple is (1,0) go EAST. (-1,0) go WEST. (0,1) go NORTH. (0,-1) go SOUTH
+               """
+               if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (1, 0):
+               	             	
+                    #if EAST in legal
+                  if Directions.EAST in legal:
+                  	                  	
+                     return Directions.EAST
+                        
+               if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (-1, 0):
+               	                   
+                  #if WEST in legal
+                  if Directions.WEST in legal:
+                  	                   	
+                     return Directions.WEST
+                        
+               if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (0, 1):
+               	                  
+                  #if NORTH in legal
+                  if Directions.NORTH in legal:
+                  	                  	
+                     return Directions.NORTH
+                        
+               if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (0, -1):
+               	               	
+                    #if SOUTH in legal
+                  if Directions.SOUTH in legal:
+                  	
+                  	return Directions.SOUTH
+                    
+ 				 				
+            if len_of_list == 1:
+               
+                self.flag = self.flag + 1
+
+                if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (1, 0):
+                    
+                    if Directions.EAST in legal:
+                    	
+                        return Directions.EAST
+                        
+                if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (-1, 0):
+                    
+                    if Directions.WEST in legal:
+                    	
+                        return Directions.WEST
+                        
+                if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (0, 1):
+                    
+                    if Directions.NORTH in legal:
+                    	
+                        return Directions.NORTH
+                        
+                if ((next_location[0][0] - current_location[0]), (next_location[0][1] - current_location[1])) == (0, -1):
+                    
+                    if Directions.SOUTH in legal:
+                    	
+                        return Directions.SOUTH
+
+
+
+
+
+
+
+
+    
+    def bfs(self, start, goal, wall_location):
+    	""" constructs a path containing all the nodes/coordinates using the bfs algorithm from pacmans current location (start argument) to the goal location
+    	takes the wall location as an argument also"""
+    	
+    	
+			#creates empty deque object	
+        queue = collections.deque()
+        
+        #creates a visited set which will contain all the explored nodes
+        visited = set()
+        #creates a dictionary which will contain the parent child node relationships and actions to get there in the following format [(9,2)]:((9,1),(0,1)
+        meta = dict()
+
+        # initialize with the root value and have the parent and action as None,None
+        meta[start] = (None, None)
+        
+        #append the root (9,1) to the deque
+        queue.append(start)
+			
+		#iterate through the deque until it is empty	
+        while queue:
+        	
+            #pop most recently added node from the deque and assign it to the variable start
+            start = queue.popleft()
+            
+            # if the current node is the goal then call the construct_path function with current_node (as start), the goal and meta arguments
+            if start == goal:
+                return (self.construct_path(start, meta, goal))
+
+            #get successor function returns a list of the child nodes/ neighbouring nodes of the current node and the action to reach the child from parent i.e (9,2)(0,1)
+            for child, action in self.get_successor(start):
+            	
+					#if the child is already in the explored set ignore it 
+                if child in visited:
+                    continue
+               #if the child is not explored and the child is not in the queue to be explored do the follwoing      
+                elif (child not in queue) and (child not in wall_location):
+                	
+                	#add it to the meta dictionary with the parent (as start) and the action taken from the parent to reach it 
+                    meta[child] = (start, action)
+                    
+                    #append it to the queue list so that it will be passed to the bfs and explored
+                    queue.append(child)
+                    
+				#add the start node that has been explored (children found) to the visited set.
+            visited.add(start)
+
+            
+
+    def get_successor(self, my_location):
+    	#creates a list of children that includes the action taken from parent to reach each child.
+		        
+        
+        #takes the x and y from the location entered as the start of the bfs
+        x, y = my_location
+        
+        #creates empty children list to store the children 
+        children = []
+        
+        #creates a child in to the east of the location passed into the bfs as start argument
+        east = ((x + 1, y), (1, 0))
+        
+        #creates child to the west of start location 
+        west = ((x - 1, y), (-1, 0))
+        
+		  #creates child to the north of start location         
+        north = ((x, y + 1), (0, 1))
+        
+        #creates child to the south of start location
+        south = ((x, y - 1), (0, -1))
+        
+        #appends child to the empty children list
+        children.append(east)
+        
+        
+        children.append(west)
+        
+        children.append(north)
+        
+        children.append(south)
+        
+		  #function returns list of neighbouring nodes from the start node entered into the bfs alongside actions required to reach each child node
+        return children
+
+    def construct_path(self, node, meta, goal):
+    	#function constructs a path from the start coordinate (node argument) to the goal coordinate (goal argument) using the meta dictionary to construct a path
+        
+		#empty action list	        
+        action_list = []
+        
+		  #loop will execute until the root node is reached        
+        while (meta[node][0] != None):
+        	
+        		#assigns the node stored within a dictionary key to the node variable
+            node, action = meta[node]
+            
+            #appends the sequence of nodes returned to the action list
+            action_list.append(node)
+
+		  #reverses the action list so that it gives the path from start location to goal rather than the opposite
+        action_list.reverse()
+        
+        #appends the goal to the end of the action list
+        action_list = (action_list) + [goal]
+        
+	     #returns a list of coordinates which take pac-man agent from start of the path to the goal 
+        return action_list
+
+
+
+
+
+
+
+  
+
+
+                
+
