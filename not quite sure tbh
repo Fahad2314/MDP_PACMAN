@@ -1,0 +1,342 @@
+class MDPAgent(Agent):
+
+    # Constructor: this gets run when we first invoke pacman.py
+    def __init__(self):
+       # print "Starting up MDPAgent!"
+        #name = "Pacman"
+        self.pacman_steps = list()
+        self.reward_dict = dict()
+        self.dict_util =dict()
+        self.flag =0
+
+    # Gets run after an MDPAgent object is created and once there is
+    # game state to access.
+    def registerInitialState(self, state):
+        #print "Running registerInitialState for MDPAgent!"
+        print "I'm at:"
+        print api.whereAmI(state)
+        
+    # This is what gets run in between multiple games
+    def final(self, state):
+        print "Looks like the game just ended!"
+        self.pacman_steps = list()
+        self.dict_util = dict()
+        self.reward_dict =dict()
+        self.new_dict = dict()
+        self.flag =0
+
+    # For now I just move randomly
+    def getAction(self, state):
+    	  #calls the legal Actions api which returns a list of legal moves from Pac-man agents current location	
+        legal = api.legalActions(state)
+         
+        #corners API returns a list of the four corners in each maze    
+        corners = api.corners(state)
+        
+        #calls the API which returns wall locations 
+        wall_location = api.walls(state)
+        #print('walls', wall_location)
+        
+        #API call returns Pac-man agent's current location
+        my_location = api.whereAmI(state)
+        
+        #API call returns food location
+        food_location = api.food(state)
+        
+        #API call returns ghost locations 
+        ghost_location = api.ghosts(state)
+
+        # print('corners:', corners)
+        # print('walls:', wall_location)
+        # print('pacman location:', my_location)
+
+        width = corners[3][0] - corners[0][0]
+        #print( 'width of grid:', width)
+
+        height = corners[3][1] - corners[1][1]  
+        #print('height of grid:', height)
+
+        #global variables
+        
+        
+
+        rows =[]
+        #create co-ordinates with dimensions of the map
+        for i in range(width+1):
+            
+            for j in range(height+1):
+
+                rows.append((i,j))
+        #if coordinates in walls remove so that only traversable coordinates remain
+        for wall in wall_location:
+
+            if wall  in rows:
+                rows.remove(wall)
+                
+        #print traversable coordinates
+        print('coordinates:', rows)
+        
+         
+        # for coord in rows:
+        #     if coord in food_location and (coord not in ghost_location):
+        #         self.reward_dict[coord] = 10.0
+        #     elif coord in ghost_location:
+        #         self.reward_dict[coord] = -20.0
+        #     else:
+        #         self.reward_dict[coord] =0.0
+
+        # # print('Ghost location', ghost_location )
+        # # print('dict of rewards :', self.reward_dict)
+
+        # #counter used to control the while loop iterations
+        # count = 0
+        # #while loop to control the number of value iterations before a move is made 
+        # while count < 2:
+        #     #for loop, loops through the dictionary 
+        #     for node in sorted(self.reward_dict):
+        #         #returns a list of traversable coordinates from the current node in the loop stores them in children
+        #         children = self.neighbour(node, wall_location)
+        #         #len of children signifies number of makeable moves Pac-man can make from the current location
+        #         len_children = len(children)
+
+        #         if len_children ==1:
+        #             self.dict_util[node] = self.reward_dict[node]
+
+        #             print("%s", node)
+        #             #print("reward map utility", self.reward_dict[node])
+        #             print("utility map ", self.dict_util[node])
+                    
+        #         #if the number of moves available is two then that means that two of the adjacent nodes are walls
+        #         elif len_children ==2:
+
+        #             x,y = node
+        #             up = (x,y+1)
+        #             down = (x, y-1)
+        #             right = (x+1,y)
+        #             left = (x-1,y)
+        #             expected_utils = []
+        #         #find which nodes are walls and calculate the expected utilities of all four directions and append to list
+        #             if ((left in wall_location) and (down in wall_location)):
+        #                 #if the wall is to the left and to south calcualte the maximum expected utilities for each direction as follows
+        #                 exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_down = (self.dict_util[node]*0.9) + (self.dict_util[right]*0.1)
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+        #                 exp_left = (self.dict_util[node]*0.9) + (self.dict_util[up]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+        #                 expected_utils.append(round(exp_left,2))
+
+        #             elif ((right in wall_location) and (down in wall_location)):
+        #                 exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[node]*0.1)
+        #                 exp_down = (self.dict_util[node]*0.9) + (self.dict_util[left]*0.1)
+        #                 exp_right = (self.dict_util[node]*0.9) + (self.dict_util[up]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             elif ((up in wall_location) and (down in wall_location)):
+        #                 exp_up = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.2) 
+        #                 exp_down = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.2)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             elif ((left in wall_location) and (right in wall_location)):
+        #                 exp_up = (self.dict_util[up]*0.8)  + (self.dict_util[node]*0.2)
+        #                 exp_left = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+        #                 exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.2) 
+        #                 exp_right = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             elif ((up in wall_location) and (right in wall_location)):
+        #                 exp_up = (self.dict_util[node]*0.9)  + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+        #                 exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1) 
+        #                 exp_right = (self.dict_util[node]*0.9) + (self.dict_util[down]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             elif ((up in wall_location) and (left in wall_location)):
+        #                 exp_up = (self.dict_util[node]*0.9)  + (self.dict_util[right]*0.1)
+        #                 exp_left = (self.dict_util[node]*0.9) + (self.dict_util[down]*0.1)
+        #                 exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[right]*0.1) 
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[down]*0.1) + (self.dict_util[node]*0.1) 
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             #calculate the bellman update and apply it to the value for the node in the current iteration i.e (9,1):0.8
+
+                    
+        #             print("node", node)
+        #             print("manhattan distance",util.manhattanDistance(node,ghost_location[0]))
+        #             print("expected utilities", expected_utils)
+                    
+        #             if ghost_location == node:
+        #                 print("reward map:", self.reward_util[node])
+        #                 print("utility map:", self.dict_util[node])
+        #                 self.dict_util[node] = self.reward_util[node]
+                    
+        #             elif ghost_location in (up or down or left or right):
+        #                 self.dict_util[node] = round(0.0 + 1.0 * round(min(expected_utils,2),2))
+        #             else:
+        #                 self.dict_util[node] = round(0.0 + 1.0 * round(max(expected_utils),2),2)
+                    
+                
+        #         elif len_children ==3:
+        #             x,y = node
+        #             up = (x,y+1)
+        #             down = (x, y-1)
+        #             right = (x+1,y)
+        #             left = (x-1,y)
+        #             expected_utils = []
+
+        #             if right in wall_location:
+        #                 exp_up = (self.dict_util[up]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+        #                 exp_down = (self.dict_util[down]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_right = (self.dict_util[node]*0.8) + (self.dict_util[up]*0.1) + (self.dict_util[down]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+                    
+        #             elif left in wall_location:
+        #                 exp_up = (self.dict_util[up]*0.8) + (self.dict_util[right]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+        #                 exp_down = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+                    
+        #             elif up in wall_location:
+        #                 exp_up = (self.dict_util[node]*0.8) + (self.dict_util[right]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+        #                 exp_down = (self.dict_util[down]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[down]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+                    
+        #             elif down in wall_location:
+        #                 exp_up = (self.dict_util[up]*0.8) + (self.dict_util[right]*0.1) + (self.dict_util[left]*0.1)
+        #                 exp_left = (self.dict_util[left]*0.8) + (self.dict_util[node]*0.1) + (self.dict_util[up]*0.1)
+        #                 exp_down = (self.dict_util[node]*0.8) + (self.dict_util[left]*0.1) + (self.dict_util[right]*0.1)
+        #                 exp_right = (self.dict_util[right]*0.8) + (self.dict_util[node]*0.1) + (self.reward_dict[up]*0.1)
+
+        #                 expected_utils.append(round(exp_up,2))
+        #                 expected_utils.append(round(exp_left,2))
+        #                 expected_utils.append(round(exp_down,2))
+        #                 expected_utils.append(round(exp_right,2))
+
+        #             print("node", node)
+        #             print("manhattan distance",util.manhattanDistance(node,ghost_location[0]))
+        #             print("expected utilities", expected_utils)
+                    
+        #             if ghost_location == node:
+        #                 print("reward map:", self.reward_util[node])
+        #                 print("utility map:", self.dict_util[node])
+        #                 self.dict_util[node] = self.reward_util[node]
+                    
+        #             elif ghost_location in (up or down or left or right):
+        #                 self.dict_util[node] = round(0.0 + 1.0 * round(min(expected_utils,2),2))
+        #             else:
+        #                 self.dict_util[node] = round(0.0 + 1.0 * round(max(expected_utils),2),2)
+                
+        #         elif len_children ==4:
+        #             pass
+
+            #outside for loop for each node 
+
+        #     count = count +1
+        #     raw_input('Press Enter')
+        #     print("food location",)
+        #     print("Ghost location", ghost_location)
+        #     #print("reward utilities", self.reward_dict)
+        #     for key in sorted(self.dict_util):
+        #         print("utility calculated")
+        #         print("%s: %s" % (key, self.dict_util[key] ))
+        #     #print("utility dict", sorted(self.dict_util))
+        #     print('COUNT!!!!!',  count)
+        
+        # #raw_input('Press Enter')
+        raw_input('Press Enter')
+        print("walls", wall_location)
+
+        return api.makeMove(Directions.STOP, legal)
+
+    def neighbour(self, node, wall_location):
+        children = []
+        x,y = node
+        #print ('parent node:', node)
+        #print('x', x)
+        #print('y', y)
+        north = (x, y+1)
+        south = (x, y-1)
+        east = (x+1, y)
+        west = (x-1,y)
+
+        if north not in wall_location:
+
+            children.append(north)
+        else:
+            pass
+        if south not in wall_location:
+            children.append(south)
+        else:
+            pass
+            
+        if east not in wall_location:
+            children.append(east)
+        else:
+            pass
+        if west not in wall_location:
+            children.append(west)
+            #print ('child nodes:', children)
+        return children
+
+    #def MDP (self, node, reward_dict, utility_dict):
+        """Conducts MDP calculations by accounting for the number of moves available in each 
+        node that Pac-man can traverse. It then proceeds to calculate the utility of the node 
+        using the Bellman equation """
+
+        
+    
+    def children(self, node):
+        children = []
+        x,y = node
+        up = (x, y+1)
+        down = (x, y-1)
+        left = (x-1, y)
+        right = (x+1,y)
+
+        children.append(up)
+        children.append(down)
+        children.append(left)
+        children.append(right)
+
+        return children
